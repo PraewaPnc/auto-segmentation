@@ -26,23 +26,31 @@ st.set_page_config(page_title='The Segmentation App',
 class AutoClustering():
   def __init__(self, method='elbow', max_cluster=11, **kwargs):
       self.n_clusters = n_clusters
-      self.max_cluster = max_cluster
+      # self.max_cluster = max_cluster
       self.method = method
       self.kwargs = kwargs
 
   def find_cluster(self, X):
     X = X.copy()
 
-    clusters = range(2, self.max_cluster)
+    clusters = range(2, 50)
     wcss = {}
     cluster = []
     score = []
 
-    if self.method=='elbow':
+    if self.method=='auto':
       for k in clusters:
           kmeans = KMeans(n_clusters=k, init="k-means++",  random_state=42)
           kmeans.fit(X)
           wcss[k] = kmeans.inertia_
+          print(k)
+
+          if k >= 3:
+              dif = (wcss[k] - wcss[k-1])/wcss[k-1]
+              if dif < -0.02:
+                  break
+
+
 
       kn = KneeLocator(x=list(wcss.keys()),
                   y=list(wcss.values()),
@@ -51,24 +59,29 @@ class AutoClustering():
       k = kn.knee
 
       self.wcss = wcss
+      #
+      # self.wcss_df = pd.DataFrame({'cluster': self.wcss.keys(),
+      #                           'wcss': self.wcss.values()})
+      #
+      # self.wcss_df['pct'] = self.wcss_df['wcss'].pct_change()
 
-    elif self.method=='silhouette':
-      for k in clusters:
-          kmeans = KMeans(n_clusters=k, init="k-means++",  random_state=42)
-          cluster_labels = kmeans.fit_predict(X)
-
-          silhouette_avg = silhouette_score(X, cluster_labels)
-          cluster.append(k)
-          score.append(silhouette_avg)
-
-      silho_df = pd.DataFrame(list(zip(cluster, score)),
-                            columns =['n_clusters', 'silhouette_score'])
-
-      k = int(silho_df[silho_df['silhouette_score'] == max(silho_df['silhouette_score'])]['n_clusters'])
-
-      self.cluster = cluster
-      self.score = score
-      self.silho_df = silho_df
+    # elif self.method=='silhouette':
+    #   for k in clusters:
+    #       kmeans = KMeans(n_clusters=k, init="k-means++",  random_state=42)
+    #       cluster_labels = kmeans.fit_predict(X)
+    #
+    #       silhouette_avg = silhouette_score(X, cluster_labels)
+    #       cluster.append(k)
+    #       score.append(silhouette_avg)
+    #
+    #   silho_df = pd.DataFrame(list(zip(cluster, score)),
+    #                         columns =['n_clusters', 'silhouette_score'])
+    #
+    #   k = int(silho_df[silho_df['silhouette_score'] == max(silho_df['silhouette_score'])]['n_clusters'])
+    #
+    #   self.cluster = cluster
+    #   self.score = score
+    #   self.silho_df = silho_df
 
     elif self.method=='manual':
       k = self.n_clusters
@@ -79,7 +92,7 @@ class AutoClustering():
     X = X.copy()
     self.k = self.find_cluster(X)
 
-    self.model = KMeans(n_clusters=self.k, **self.kwargs)
+    self.model = KMeans(n_clusters=self.k, **self.kwargs, random_state=42)
     self.model.fit(X)
 
     return self
@@ -94,6 +107,7 @@ class AutoClustering():
 
 
   def plot_elbow(self):
+    # data = self.wcss_df[(self.wcss_df['pct'] < -0.1) | self.wcss_df['pct'].isna()]
     fig = px.line(x=list(self.wcss.keys()),
               y=list(self.wcss.values()),
               markers=True)
@@ -194,7 +208,7 @@ st.write("""
 
 In this implementation, the *KMeans()* function is used this app for build a clustering model using the **KMeans** algorithm.
 
-Try adjusting the hyperparameter!
+Try uploading the file and adjusting the hyperparameter!
 
 """)
 
@@ -209,8 +223,7 @@ with st.sidebar.header('1. Upload your CSV data'):
         df = pd.read_csv(uploaded_file)
         drop_col = st.sidebar.multiselect('Drop columns', df.columns.tolist())
     else:
-        st.info('Awaiting for CSV file to be uploaded.')
-
+        st.info('Awaiting for CSV file to be uploaded. **!!!**')
 
 # Transform options
 with st.sidebar.header('2. Transform Data'):
@@ -233,23 +246,23 @@ with st.sidebar.header('2. Transform Data'):
 
 # Select method for choose n_clusters
 with st.sidebar.subheader('3. Select number of cluster'):
-    max_cluster = st.sidebar.slider('Maximum number of clusters', 1, 100, 2, 1)
-    method = st.sidebar.selectbox('Method', ['elbow', 'silhouette', 'manual'])
+    # max_cluster = st.sidebar.slider('Maximum number of clusters', 1, 100, 10, 1)
+    method = st.sidebar.selectbox('Method', ['auto', 'manual'])
     if method == 'manual':
         n_clusters = st.sidebar.number_input('Number of clusters (n_clusters)', value=0)
     else:
         n_clusters = 20
 
 # Sidebar - Specify parameter settings
-with st.sidebar.subheader('4. Set Parameters in **KMeans**'):
-    init = st.sidebar.selectbox('Method for initialization (init)', ['k-means++', 'random'])
-    n_init = st.sidebar.slider('Initial cluster centroids (n_init)', 1, 10, 10, 1)
-    max_iter = st.sidebar.slider('Maximum number of iterations (max_iter)', 1, 2000, 300, 1)
-    verbose = st.sidebar.slider('Verbosity mode (verbose)', 1, 10, 0, 1)
-    random_state = st.sidebar.slider('Random State (random_state)', 1, 100, 42, 1)
-    algorithm = st.sidebar.selectbox('K-means algorithm to use (algorithm)', ['auto', 'full', 'elkan'])
+# with st.sidebar.subheader('4. Set Parameters in **KMeans**'):
+#     init = st.sidebar.selectbox('Method for initialization (init)', ['k-means++', 'random'])
+#     n_init = st.sidebar.slider('Initial cluster centroids (n_init)', 1, 10, 10, 1)
+#     max_iter = st.sidebar.slider('Maximum number of iterations (max_iter)', 1, 2000, 300, 1)
+#     verbose = st.sidebar.slider('Verbosity mode (verbose)', 1, 10, 0, 1)
+#     random_state = st.sidebar.slider('Random State (random_state)', 1, 100, 42, 1)
+#     algorithm = st.sidebar.selectbox('K-means algorithm to use (algorithm)', ['auto', 'full', 'elkan'])
 
-with st.sidebar.subheader('5. Dimension Reduction [Optional]'):
+with st.sidebar.subheader('4. Dimension Reduction [Optional]'):
     pca = st.sidebar.checkbox('PCA')
     if pca:
         n_components = st.sidebar.number_input('Number of Dimension (n_components)', value=0)
@@ -260,14 +273,16 @@ with st.sidebar.subheader('5. Dimension Reduction [Optional]'):
 # Displays the dataset
 st.subheader('Dataset')
 
-autoClustering = AutoClustering(method=method,
-                                max_cluster=max_cluster,
-                                init=init,
-                                n_init=n_init,
-                                max_iter=max_iter,
-                                verbose=verbose,
-                                random_state=random_state,
-                                algorithm=algorithm)
+# autoClustering = AutoClustering(method=method,
+#                                 max_cluster=max_cluster,
+#                                 init=init,
+#                                 n_init=n_init,
+#                                 max_iter=max_iter,
+#                                 verbose=verbose,
+#                                 random_state=random_state,
+#                                 algorithm=algorithm)
+
+autoClustering = AutoClustering(method=method)
 
 if uploaded_file is not None:
     X = df.drop(columns=drop_col, axis=1)
@@ -277,7 +292,6 @@ if uploaded_file is not None:
     st.info(X.shape)
     st.write('Features for clustering')
     st.info(X.columns.to_list())
-
 
 transformed_X = preprocessor.fit_transform(X)
 if pca:
@@ -295,7 +309,7 @@ df['Cluster'] = clusters + 1
 
 st.subheader('Clustering Result')
 
-if method == 'elbow':
+if method == 'auto':
     fig = autoClustering.plot_elbow()
     st.plotly_chart(fig)
 elif method == 'silhouette':
@@ -304,7 +318,7 @@ elif method == 'silhouette':
 else:
     pass
 
-st.write('Optimul Number of Cluster')
+st.write('Optimal Number of Clusters')
 st.info(number_clusters)
 st.write('Predict cluster index for each sample.')
 st.info(clusters + 1)
