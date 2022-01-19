@@ -43,14 +43,12 @@ class AutoClustering():
           kmeans = KMeans(n_clusters=k, init="k-means++",  random_state=42)
           kmeans.fit(X)
           wcss[k] = kmeans.inertia_
-          print(k)
+        #   print(k)
 
-          if k >= 3:
-              dif = (wcss[k] - wcss[k-1])/wcss[k-1]
-              if dif < -0.02:
-                  break
-
-
+        #   if k >= 3:
+        #       dif = (wcss[k] - wcss[k-1])/wcss[k-1]
+        #       if dif < -0.02:
+        #           break
 
       kn = KneeLocator(x=list(wcss.keys()),
                   y=list(wcss.values()),
@@ -270,21 +268,21 @@ with st.sidebar.subheader('4. Dimension Reduction [Optional]'):
 #-----------------------------------#
 # Main panel
 
+if uploaded_file:
 # Displays the dataset
-st.subheader('Dataset')
+    st.subheader('Dataset')
 
-# autoClustering = AutoClustering(method=method,
-#                                 max_cluster=max_cluster,
-#                                 init=init,
-#                                 n_init=n_init,
-#                                 max_iter=max_iter,
-#                                 verbose=verbose,
-#                                 random_state=random_state,
-#                                 algorithm=algorithm)
+    # autoClustering = AutoClustering(method=method,
+    #                                 max_cluster=max_cluster,
+    #                                 init=init,
+    #                                 n_init=n_init,
+    #                                 max_iter=max_iter,
+    #                                 verbose=verbose,
+    #                                 random_state=random_state,
+    #                                 algorithm=algorithm)
 
-autoClustering = AutoClustering(method=method)
+    autoClustering = AutoClustering(method=method)
 
-if uploaded_file is not None:
     X = df.drop(columns=drop_col, axis=1)
     st.markdown('**Glimpse of dataset**')
     st.write(X.head(5))
@@ -293,53 +291,53 @@ if uploaded_file is not None:
     st.write('Features for clustering')
     st.info(X.columns.to_list())
 
-transformed_X = preprocessor.fit_transform(X)
-if pca:
-    pca = PCA(n_components=n_components, random_state=42)
-    pca_X = pca.fit_transform(transformed_X)
-    autoClustering.fit(pca_X)
-    clusters = autoClustering.predict(pca_X)
-    number_clusters = autoClustering.find_cluster(pca_X)
-else:
-    autoClustering.fit(transformed_X)
-    clusters = autoClustering.predict(transformed_X)
-    number_clusters = autoClustering.find_cluster(transformed_X)
+    transformed_X = preprocessor.fit_transform(X)
+    if pca:
+        pca = PCA(n_components=n_components, random_state=42)
+        pca_X = pca.fit_transform(transformed_X)
+        autoClustering.fit(pca_X)
+        clusters = autoClustering.predict(pca_X)
+        number_clusters = autoClustering.find_cluster(pca_X)
+    else:
+        autoClustering.fit(transformed_X)
+        clusters = autoClustering.predict(transformed_X)
+        number_clusters = autoClustering.find_cluster(transformed_X)
 
-df['Cluster'] = clusters + 1
+    df['Cluster'] = clusters + 1
 
-st.subheader('Clustering Result')
+    st.subheader('Clustering Result')
 
-if method == 'auto':
-    fig = autoClustering.plot_elbow()
-    st.plotly_chart(fig)
-elif method == 'silhouette':
-    fig = autoClustering.plot_silho()
-    st.plotly_chart(fig)
-else:
-    pass
+    if method == 'auto':
+        fig = autoClustering.plot_elbow()
+        st.plotly_chart(fig)
+    elif method == 'silhouette':
+        fig = autoClustering.plot_silho()
+        st.plotly_chart(fig)
+    else:
+        pass
 
-st.write('Optimal Number of Clusters')
-st.info(number_clusters)
-st.write('Predict cluster index for each sample.')
-st.info(clusters + 1)
+    st.write('Optimal Number of Clusters')
+    st.info(number_clusters)
+    st.write('Predict cluster index for each sample.')
+    st.info(clusters + 1)
 
-st.markdown('Model Parameters')
-st.write(autoClustering.get_params())
+    st.markdown('Model Parameters')
+    st.write(autoClustering.get_params())
 
-st.subheader('Dataset with Cluster')
-st.write(df)
+    st.subheader('Dataset with Cluster')
+    st.write(df)
 
-#---------------------------#
-# Visualization
+    #---------------------------#
+    # Visualization
 
-st.subheader('Visualization')
-autoVisualized = AutoVisualized(data=df)
-# plot the total number of cluster
-pc = autoVisualized.plot_cluster()
-st.plotly_chart(pc)
+    st.subheader('Visualization')
+    autoVisualized = AutoVisualized(data=df)
+    # plot the total number of cluster
+    pc = autoVisualized.plot_cluster()
+    st.plotly_chart(pc)
 
-list_clust = st.multiselect('Select cluster', df.Cluster.unique().tolist())
+    list_clust = st.multiselect('Select cluster', df.Cluster.unique().tolist())
 
-# Compare 2 clusters
-plot = autoVisualized.compare_radar_chart(list_n=list_clust)
-st.plotly_chart(plot)
+    # Compare 2 clusters
+    plot = autoVisualized.compare_radar_chart(list_n=list_clust)
+    st.plotly_chart(plot)
